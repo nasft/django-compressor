@@ -1,3 +1,8 @@
+Why this fork?
+==============
+
+To deal with https://github.com/django-compressor/django-compressor/issues/706 (a.k.a. #5368)
+
 Django Compressor
 =================
 
