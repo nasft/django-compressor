@@ -339,7 +339,8 @@ class Compressor(object):
 
         self.context['compressed'].update(context or {})
         self.context['compressed'].update(self.extra_context)
-        if hasattr(self.context, 'flatten'):
+        # #5368 - disable this call to flatten(), can result in 500 error
+        if False and hasattr(self.context, 'flatten'):
             # Django 1.8 complains about Context being passed to its
             # Template.render function.
             final_context = self.context.flatten()
