@@ -3,6 +3,7 @@ import os
 import codecs
 from importlib import import_module
 
+from django import VERSION
 from django.core.files.base import ContentFile
 from django.utils.safestring import mark_safe
 from django.utils.six.moves.urllib.request import url2pathname
@@ -14,7 +15,7 @@ from compressor.conf import settings
 from compressor.exceptions import (CompressorError, UncompressableFileError,
         FilterDoesNotExist)
 from compressor.filters import CachedCompilerFilter
-from compressor.filters.css_default import CssAbsoluteFilter
+from compressor.filters.css_default import CssAbsoluteFilter, CssRelativeFilter
 from compressor.storage import compressor_file_storage
 from compressor.signals import post_compress
 from compressor.utils import get_class, get_mod_func, staticfiles
@@ -91,12 +92,12 @@ class Compressor(object):
         Returns file path for an output file based on contents.
 
         Returned path is relative to compressor storage's base url, for
-        example "CACHE/css/e41ba2cc6982.css".
+        example "CACHE/css/58a8c0714e59.css".
 
         When `basename` argument is provided then file name (without extension)
         will be used as a part of returned file name, for example:
 
-        get_filepath(content, "my_file.css") -> 'CACHE/css/my_file.e41ba2cc6982.css'
+        get_filepath(content, "my_file.css") -> 'CACHE/css/my_file.58a8c0714e59.css'
         """
         parts = []
         if basename:
@@ -211,6 +212,8 @@ class Compressor(object):
                 # on precompiled css files even if compression is disabled.
                 if CssAbsoluteFilter in self.cached_filters:
                     value = self.filter(value, [CssAbsoluteFilter], **options)
+                elif CssRelativeFilter in self.cached_filters:
+                    value = self.filter(value, [CssRelativeFilter], **options)
                 yield self.handle_output(kind, value, forced=True,
                                          basename=basename)
             else:
@@ -339,10 +342,12 @@ class Compressor(object):
 
         self.context['compressed'].update(context or {})
         self.context['compressed'].update(self.extra_context)
+
         # #5368 - disable this call to flatten(), can result in 500 error
-        if False and hasattr(self.context, 'flatten'):
-            # Django 1.8 complains about Context being passed to its
-            # Template.render function.
+        if False and hasattr(self.context, 'flatten') and VERSION >= (1, 9):
+            # Passing Contexts to Template.render is deprecated since Django 1.8.
+            # However, we use the fix below only for django 1.9 and above, since
+            # the flatten method is buggy in 1.8, see https://code.djangoproject.com/ticket/24765
             final_context = self.context.flatten()
         else:
             final_context = self.context

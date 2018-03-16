@@ -87,6 +87,15 @@ Backend settings
          feature, and the ``'content'`` in case you're using multiple servers
          to serve your content.
 
+    - ``compressor.filters.css_default.CssRelativeFilter``
+
+      An alternative to ``CssAbsoluteFilter``. It uses a relative instead of an
+      absolute path to prefix URLs. Specifically, the prefix will be  ``'../' * (N + 1)``
+      where ``N`` is the *depth* of ``settings.COMPRESS_OUTPUT_DIR`` folder
+      (i.e. ``1`` for ``'CACHE'``, or ``2``for ``CACHE/data`` etc). This can be
+      useful if you don't want to hard-code :attr:`~django.conf.settings.COMPRESS_URL`
+      into CSS code.
+
     - ``compressor.filters.datauri.CssDataUriFilter``
 
       A filter for embedding media as `data: URIs`_ in the CSS.
@@ -370,18 +379,10 @@ Caching settings
 
 .. attribute:: COMPRESS_CACHE_BACKEND
 
-    :Default: ``CACHES["default"]`` or ``CACHE_BACKEND``
+    :Default: ``"default"``
 
-    The backend to use for caching, in case you want to use a different cache
-    backend for Django Compressor.
-
-    If you have set the ``CACHES`` setting (new in Django 1.3),
-    ``COMPRESS_CACHE_BACKEND`` defaults to ``"default"``, which is the alias for
-    the default cache backend. You can set it to a different alias that you have
-    configured in your ``CACHES`` setting.
-
-    If you have not set ``CACHES`` and are using the old ``CACHE_BACKEND``
-    setting, ``COMPRESS_CACHE_BACKEND`` defaults to the ``CACHE_BACKEND`` setting.
+    The cache to use by Django Compressor. Must be a cache alias specified in
+    your ``CACHES`` setting.
 
 .. attribute:: COMPRESS_REBUILD_TIMEOUT
 
