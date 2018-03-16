@@ -343,12 +343,25 @@ class Compressor(object):
         self.context['compressed'].update(context or {})
         self.context['compressed'].update(self.extra_context)
 
-        # #5368 - disable this call to flatten(), can result in 500 error
-        if False and hasattr(self.context, 'flatten') and VERSION >= (1, 9):
+        if hasattr(self.context, 'flatten') and VERSION >= (1, 9):
             # Passing Contexts to Template.render is deprecated since Django 1.8.
             # However, we use the fix below only for django 1.9 and above, since
             # the flatten method is buggy in 1.8, see https://code.djangoproject.com/ticket/24765
-            final_context = self.context.flatten()
+            try:
+                final_context = self.context.flatten()
+            except ValueError:
+                # Errors along the lines of this can be fixed by pre-flattening
+                # inner dicts:
+                #
+                # *** ValueError: dictionary update sequence element #0 has \
+                # length 8; 2 is required
+
+                dicts = self.context.dicts
+                self.context.dicts = [
+                    d.flatten() for d in dicts
+                    if hasattr(d, 'flatten')
+                ]
+                final_context = self.context.flatten()
         else:
             final_context = self.context
 
