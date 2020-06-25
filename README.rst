@@ -3,6 +3,8 @@ Why this fork?
 
 To deal with https://github.com/django-compressor/django-compressor/issues/706 (a.k.a. #5368)
 
+(Upgrading to Django 1.11 removed the need for this local fork, we no longer use it.)
+
 Django Compressor
 =================
 
