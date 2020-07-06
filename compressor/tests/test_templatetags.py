@@ -45,7 +45,33 @@ class TemplatetagTestCase(TestCase):
 <style type="text/css">p { border:5px solid green;}</style>
 <link rel="stylesheet" href="{{ STATIC_URL }}css/two.css" type="text/css">
 {% endcompress %}"""
-        out = css_tag("/static/CACHE/css/e41ba2cc6982.css")
+        out = css_tag("/static/CACHE/css/output.58a8c0714e59.css")
+        self.assertEqual(out, render(template, self.context))
+
+    def test_css_tag_with_block(self):
+        template = """{% load compress %}{% compress css file block_name %}
+<link rel="stylesheet" href="{{ STATIC_URL }}css/one.css" type="text/css">
+<style type="text/css">p { border:5px solid blue;}</style>
+<link rel="stylesheet" href="{{ STATIC_URL }}css/two.css" type="text/css">
+{% endcompress %}"""
+        out = css_tag("/static/CACHE/css/block_name.393dbcddb48e.css")
+        self.assertEqual(out, render(template, self.context))
+
+    def test_missing_rel_leaves_empty_result(self):
+        template = """{% load compress %}{% compress css %}
+<link href="{{ STATIC_URL }}css/one.css" type="text/css">
+{% endcompress %}"""
+        out = ""
+        self.assertEqual(out, render(template, self.context))
+
+    def test_missing_rel_only_on_one_resource(self):
+        template = """{% load compress %}{% compress css %}
+<link href="{{ STATIC_URL }}css/wontmatter.css" type="text/css">
+<link rel="stylesheet" href="{{ STATIC_URL }}css/one.css" type="text/css">
+<style type="text/css">p { border:5px solid green;}</style>
+<link rel="stylesheet" href="{{ STATIC_URL }}css/two.css" type="text/css">
+{% endcompress %}"""
+        out = css_tag("/static/CACHE/css/output.58a8c0714e59.css")
         self.assertEqual(out, render(template, self.context))
 
     def test_uppercase_rel(self):
@@ -54,7 +80,7 @@ class TemplatetagTestCase(TestCase):
 <style type="text/css">p { border:5px solid green;}</style>
 <link rel="StyleSheet" href="{{ STATIC_URL }}css/two.css" type="text/css">
 {% endcompress %}"""
-        out = css_tag("/static/CACHE/css/e41ba2cc6982.css")
+        out = css_tag("/static/CACHE/css/output.58a8c0714e59.css")
         self.assertEqual(out, render(template, self.context))
 
     def test_nonascii_css_tag(self):
@@ -63,7 +89,7 @@ class TemplatetagTestCase(TestCase):
         <style type="text/css">p { border:5px solid green;}</style>
         {% endcompress %}
         """
-        out = css_tag("/static/CACHE/css/799f6defe43c.css")
+        out = css_tag("/static/CACHE/css/output.4263023f49d6.css")
         self.assertEqual(out, render(template, self.context))
 
     def test_js_tag(self):
@@ -72,7 +98,7 @@ class TemplatetagTestCase(TestCase):
         <script type="text/javascript">obj.value = "value";</script>
         {% endcompress %}
         """
-        out = '<script type="text/javascript" src="/static/CACHE/js/066cd253eada.js"></script>'
+        out = '<script src="/static/CACHE/js/output.8a0fed36c317.js"></script>'
         self.assertEqual(out, render(template, self.context))
 
     def test_nonascii_js_tag(self):
@@ -81,7 +107,7 @@ class TemplatetagTestCase(TestCase):
         <script type="text/javascript">var test_value = "\u2014";</script>
         {% endcompress %}
         """
-        out = '<script type="text/javascript" src="/static/CACHE/js/e214fe629b28.js"></script>'
+        out = '<script src="/static/CACHE/js/output.8c00f1cf1e0a.js"></script>'
         self.assertEqual(out, render(template, self.context))
 
     def test_nonascii_latin1_js_tag(self):
@@ -90,7 +116,7 @@ class TemplatetagTestCase(TestCase):
         <script type="text/javascript">var test_value = "\u2014";</script>
         {% endcompress %}
         """
-        out = '<script type="text/javascript" src="/static/CACHE/js/be9e078b5ca7.js"></script>'
+        out = '<script src="/static/CACHE/js/output.06a98ccfd380.js"></script>'
         self.assertEqual(out, render(template, self.context))
 
     def test_compress_tag_with_illegal_arguments(self):
@@ -115,6 +141,22 @@ class TemplatetagTestCase(TestCase):
         <script type="text/javascript">obj.value = "value";</script>"""
         self.assertEqual(out, render(template, context))
 
+    def test_inline(self):
+        template = """{% load compress %}{% compress js inline %}
+        <script src="{{ STATIC_URL }}js/one.js" type="text/javascript"></script>
+        <script type="text/javascript">obj.value = "value";</script>
+        {% endcompress %}{% compress css inline %}
+        <link rel="stylesheet" href="{{ STATIC_URL }}css/one.css" type="text/css">
+        <style type="text/css">p { border:5px solid green;}</style>
+        <link rel="stylesheet" href="{{ STATIC_URL }}css/two.css" type="text/css">
+        {% endcompress %}"""
+
+        out_js = '<script>obj={};;obj.value="value";;</script>'
+        out_css = '\n'.join(('<style type="text/css">body { background:#990; }',
+                             'p { border:5px solid green;}',
+                             'body { color:#fff; }</style>'))
+        self.assertEqual(out_js + out_css, render(template, self.context))
+
     def test_named_compress_tag(self):
         template = """{% load compress %}{% compress js inline foo %}
         <script type="text/javascript">obj.value = "value";</script>
@@ -135,11 +177,12 @@ class TemplatetagTestCase(TestCase):
         <script type="text/javascript">var tmpl="{% templatetag openblock %} if x == 3 %}x IS 3{% templatetag openblock %} endif %}"</script>
         {% endaddtoblock %}{% render_block "js" postprocessor "compressor.contrib.sekizai.compress" %}
         """
-        out = '<script type="text/javascript" src="/static/CACHE/js/e9fce10d884d.js"></script>'
+        out = '<script src="/static/CACHE/js/output.ffc39dec05fd.js"></script>'
         self.assertEqual(out, render(template, self.context, SekizaiContext))
 
 
 class PrecompilerTemplatetagTestCase(TestCase):
+
     def setUp(self):
         precompiler = os.path.join(test_dir, 'precompiler.py')
         python = sys.executable
@@ -163,7 +206,7 @@ class PrecompilerTemplatetagTestCase(TestCase):
         template = """{% load compress %}{% compress js %}
             <script type="text/coffeescript"># this is a comment.</script>
             {% endcompress %}"""
-        out = script(src="/static/CACHE/js/e920d58f166d.js")
+        out = script(src="/static/CACHE/js/output.ec862f0ff42c.js")
         self.assertEqual(out, render(template, self.context))
 
     def test_compress_coffeescript_tag_and_javascript_tag(self):
@@ -171,7 +214,7 @@ class PrecompilerTemplatetagTestCase(TestCase):
             <script type="text/coffeescript"># this is a comment.</script>
             <script type="text/javascript"># this too is a comment.</script>
             {% endcompress %}"""
-        out = script(src="/static/CACHE/js/ef6b32a54575.js")
+        out = script(src="/static/CACHE/js/output.fb4a0d84e914.js")
         self.assertEqual(out, render(template, self.context))
 
     @override_settings(COMPRESS_ENABLED=False)
@@ -180,8 +223,8 @@ class PrecompilerTemplatetagTestCase(TestCase):
             <script type="text/coffeescript"># this is a comment.</script>
             <script type="text/javascript"># this too is a comment.</script>
             {% endcompress %}"""
-        out = (script('# this is a comment.\n') + '\n' +
-               script('# this too is a comment.'))
+        out = (script('# this is a comment.\n') + '\n'
+               + script('# this too is a comment.', scripttype="text/javascript"))
         self.assertEqual(out, render(template, self.context))
 
     @override_settings(COMPRESS_ENABLED=False)
@@ -200,7 +243,7 @@ class PrecompilerTemplatetagTestCase(TestCase):
         </script>
         {% endcompress %}"""
 
-        out = script(src="/static/CACHE/js/one.95cfb869eead.js")
+        out = script(src="/static/CACHE/js/one.4b3570601b8c.js")
         self.assertEqual(out, render(template, self.context))
 
     @override_settings(COMPRESS_ENABLED=False)
@@ -214,9 +257,9 @@ class PrecompilerTemplatetagTestCase(TestCase):
         </script>
         {% endcompress %}"""
 
-        out = '\n'.join([script(src="/static/CACHE/js/one.95cfb869eead.js"),
+        out = '\n'.join([script(src="/static/CACHE/js/one.4b3570601b8c.js"),
                          script(scripttype="", src="/static/js/one.js"),
-                         script(src="/static/CACHE/js/one.81a2cd965815.js")])
+                         script(src="/static/CACHE/js/one.8ab93aace8fa.js")])
 
         self.assertEqual(out, render(template, self.context))
 
@@ -229,8 +272,8 @@ class PrecompilerTemplatetagTestCase(TestCase):
         <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/two.css"></link>
         {% endcompress %}"""
 
-        out = ''.join(['<link rel="stylesheet" type="text/css" href="/static/css/one.css" />',
-                       '<link rel="stylesheet" type="text/css" href="/static/css/two.css" />'])
+        out = ''.join(['<link rel="stylesheet" type="text/css" href="/static/css/one.css">',
+                       '<link rel="stylesheet" type="text/css" href="/static/css/two.css">'])
 
         self.assertEqual(out, render(template, self.context))
 
@@ -244,13 +287,13 @@ class PrecompilerTemplatetagTestCase(TestCase):
         <link rel="stylesheet" type="text/less" href="{{ STATIC_URL }}css/url/test.css"/>
         {% endcompress %}"""
 
-        out = ''.join(['<link rel="stylesheet" type="text/css" href="/static/css/one.css" />',
-                       '<link rel="stylesheet" type="text/css" href="/static/css/two.css" />',
-                       '<link rel="stylesheet" href="/static/CACHE/css/test.5dddc6c2fb5a.css" type="text/css" />'])
+        out = ''.join(['<link rel="stylesheet" type="text/css" href="/static/css/one.css">',
+                       '<link rel="stylesheet" type="text/css" href="/static/css/two.css">',
+                       '<link rel="stylesheet" href="/static/CACHE/css/test.222f958fb191.css" type="text/css">'])
         self.assertEqual(out, render(template, self.context))
 
 
-def script(content="", src="", scripttype="text/javascript"):
+def script(content="", src="", scripttype=""):
     """
     returns a unicode text html script element.
 

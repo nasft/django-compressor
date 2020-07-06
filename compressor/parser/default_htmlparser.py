@@ -1,26 +1,16 @@
 import sys
 
-from django.utils import six
+import six
 from django.utils.encoding import smart_text
 
 from compressor.exceptions import ParserError
 from compressor.parser import ParserBase
 
 
-# Starting in Python 3.2, the HTMLParser constructor takes a 'strict'
-# argument which default to True (which we don't want).
-# In Python 3.3, it defaults to False.
-# In Python 3.4, passing it at all raises a deprecation warning.
-# So we only pass it for 3.2.
-# In Python 3.4, it also takes a 'convert_charrefs' argument
-# which raises a warning if we don't pass it.
-major, minor, release = sys.version_info[:3]
-CONSTRUCTOR_TAKES_STRICT = major == 3 and minor == 2
-CONSTRUCTOR_TAKES_CONVERT_CHARREFS = major == 3 and minor >= 4
+# Since Python 3.4, the HTMLParser constructor takes a 'convert_charrefs'
+# argument which raises a warning if we don't pass it.
 HTML_PARSER_ARGS = {}
-if CONSTRUCTOR_TAKES_STRICT:
-    HTML_PARSER_ARGS['strict'] = False
-if CONSTRUCTOR_TAKES_CONVERT_CHARREFS:
+if sys.version_info[:2] >= (3, 4):
     HTML_PARSER_ARGS['convert_charrefs'] = False
 
 
@@ -93,6 +83,6 @@ class DefaultHtmlParser(ParserBase, six.moves.html_parser.HTMLParser):
         if len(elem['attrs']):
             tag['attrs'] = ' %s' % ' '.join(['%s="%s"' % (name, value) for name, value in elem['attrs']])
         if elem['tag'] == 'link':
-            return '<%(tag)s%(attrs)s />' % tag
+            return '<%(tag)s%(attrs)s>' % tag
         else:
             return '<%(tag)s%(attrs)s>%(text)s</%(tag)s>' % tag

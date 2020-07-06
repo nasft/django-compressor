@@ -5,6 +5,7 @@ import socket
 import time
 from importlib import import_module
 
+import six
 from django.core.cache import caches
 from django.core.files.base import ContentFile
 from django.utils.encoding import force_text, smart_bytes
@@ -18,7 +19,7 @@ _cachekey_func = None
 
 
 def get_hexdigest(plaintext, length=None):
-    digest = hashlib.md5(smart_bytes(plaintext)).hexdigest()
+    digest = hashlib.sha256(smart_bytes(plaintext)).hexdigest()
     if length:
         return digest[:length]
     return digest
@@ -50,7 +51,16 @@ def get_mtime_cachekey(filename):
 
 
 def get_offline_hexdigest(render_template_string):
-    return get_hexdigest(render_template_string)
+    return get_hexdigest(
+        # Make the hexdigest determination independent of STATIC_URL
+        render_template_string.replace(
+            # Cast ``settings.STATIC_URL`` to a string to allow it to be
+            # a string-alike object to e.g. add ``SCRIPT_NAME`` WSGI param
+            # as a *path prefix* to the output URL.
+            # See https://code.djangoproject.com/ticket/25598.
+            six.text_type(settings.STATIC_URL), ''
+        )
+    )
 
 
 def get_offline_cachekey(source):

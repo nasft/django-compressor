@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.encoding import smart_text
+from django.utils.functional import cached_property
 
 from compressor.exceptions import ParserError
 from compressor.parser import ParserBase
-from compressor.utils.decorators import cached_property
 
 
 class Html5LibParser(ParserBase):
@@ -16,8 +16,8 @@ class Html5LibParser(ParserBase):
 
     def _serialize(self, elem):
         return self.html5lib.serialize(
-            elem, tree="etree", quote_attr_values=True,
-            omit_optional_tags=False, use_trailing_solidus=True,
+            elem, tree="etree", quote_attr_values="always",
+            omit_optional_tags=False,
         )
 
     def _find(self, *names):

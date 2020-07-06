@@ -20,8 +20,8 @@ else:
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.temp import NamedTemporaryFile
 
+import six
 from django.utils.encoding import smart_text
-from django.utils import six
 
 from compressor.cache import cache, get_precompiler_cachekey
 
@@ -40,6 +40,13 @@ class FilterBase(object):
     Subclasses should implement `input` and/or `output` methods which must
     return a string (unicode under python 2) or raise a NotImplementedError.
     """
+
+    # Since precompiling moves files around, it breaks url()
+    # statements in css files. therefore we run the absolute and relative filter
+    # on precompiled css files even if compression is disabled.
+    # This flag allows those filters to do so.
+    run_with_compression_disabled = False
+
     def __init__(self, content, attrs=None, filter_type=None, filename=None,
                  verbose=0, charset=None, **kwargs):
         self.type = filter_type or getattr(self, 'type', None)
@@ -112,7 +119,10 @@ class CompilerFilter(FilterBase):
     """
     command = None
     options = ()
-    default_encoding = settings.FILE_CHARSET
+    default_encoding = (
+        settings.FILE_CHARSET if settings.is_overridden('FILE_CHARSET') else
+        'utf-8'
+    )
 
     def __init__(self, content, command=None, **kwargs):
         super(CompilerFilter, self).__init__(content, **kwargs)
