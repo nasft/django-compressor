@@ -374,7 +374,10 @@ class Compressor(object):
             # NOTE the next line avoids https://github.com/django-compressor/django-compressor/issues/706
             # by ensuring any object in self.context.dicts is "pre-flattened" before attempting to flatten
             # the overall context.
-            self.context.dicts = list(map(lambda d: d.flatten() if hasattr(d, 'flatten') else d, self.context.dicts))
+            self.context.dicts = [
+               d.flatten() if hasattr(d, 'flatten') else d
+               for d in self.context.dicts
+            ]
             final_context = self.context.flatten()
         else:
             final_context = self.context
